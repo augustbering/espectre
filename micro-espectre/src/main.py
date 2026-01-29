@@ -15,6 +15,7 @@ from src.mvs_detector import MVSDetector
 from src.pca_detector import PCADetector
 from src.mqtt.handler import MQTTHandler
 from src.traffic_generator import TrafficGenerator
+from src.traffic_generator_echo import TrafficGeneratorEcho
 import src.config as config
 
 # Default subcarriers (used if not configured or for fallback in case of error)
@@ -489,7 +490,8 @@ def main():
     
     # Initialize and start traffic generator (rate is static from config.py)
     gc.collect()  # Free memory before creating socket
-    traffic_gen = TrafficGenerator()
+    traffic_gen = TrafficGeneratorEcho()
+    # traffic_gen.server="100.64.0.1"
     if config.TRAFFIC_GENERATOR_RATE > 0:
         if not traffic_gen.start(config.TRAFFIC_GENERATOR_RATE):
             print("FATAL: Traffic generator failed to start - CSI will not work")

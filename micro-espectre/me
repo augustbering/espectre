@@ -453,6 +453,7 @@ def deploy_code(args):
             ('src/nbvi_calibrator.py', ':src/'),
             ('src/pca_calibrator.py', ':src/'),
             ('src/traffic_generator.py', ':src/'),
+            ('src/traffic_generator_echo.py', ':src/'),
             ('src/main.py', ':src/'),
             ('src/csi_streamer.py', ':src/'),
             ('src/mqtt/__init__.py', ':src/mqtt/'),
