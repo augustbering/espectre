@@ -27,7 +27,7 @@ import gc
 import os
 import src.config as config
 from src.config import NUM_SUBCARRIERS, EXPECTED_CSI_LEN
-from src.traffic_generator import TrafficGenerator
+from src.traffic_generator_echo import TrafficGeneratorEcho as TrafficGenerator
 from src.main import connect_wifi, cleanup_wifi, run_gain_lock
 
 # Streaming configuration
@@ -170,8 +170,8 @@ def stream_csi(dest_ip, duration_sec=0):
                     sock.sendto(packet_buf, dest_addr)
                     packet_count += 1
                     seq_num = (seq_num + 1) & 0xFF
-                except Exception:
-                    pass
+                except Exception as e:
+                    print('[ERROR] Failed to send packet', e)
                 
                 # GC every 50 packets to prevent ENOMEM
                 if packet_count % 50 == 0:
