@@ -417,6 +417,15 @@ def deploy_code(args):
         print(f"  # Then edit src/config_local.py with your credentials")
         print()
         sys.exit(1)
+
+    timestamp_file = Path('.deploy_timestamp')
+    last_deploy_ts = None
+    if timestamp_file.exists():
+        print(f"Checking last deployment timestamp...\n{Fore.RED}Remove .deploy_timestamp to force redeploy of all files.{Style.RESET_ALL}")
+        try:
+            last_deploy_ts = timestamp_file.stat().st_mtime
+        except OSError:
+            last_deploy_ts = None
     
     print(f"{Fore.MAGENTA}╔═══════════════════════════════════════════════════════════╗{Style.RESET_ALL}")
     print(f"{Fore.MAGENTA}║            μESPectre - Deploying Code to Device           ║{Style.RESET_ALL}")
@@ -454,6 +463,7 @@ def deploy_code(args):
             ('src/pca_calibrator.py', ':src/'),
             ('src/traffic_generator.py', ':src/'),
             ('src/traffic_generator_echo.py', ':src/'),
+            ('src/knn_classifier.py', ':src/'),
             ('src/main.py', ':src/'),
             ('src/csi_streamer.py', ':src/'),
             ('src/mqtt/__init__.py', ':src/mqtt/'),
@@ -465,9 +475,21 @@ def deploy_code(args):
             if not Path(src).exists():
                 print(f"{Fore.RED}  ❌ File not found: {src}{Style.RESET_ALL}")
                 continue
+            if last_deploy_ts is not None:
+                try:
+                    if Path(src).stat().st_mtime <= last_deploy_ts:
+                        print(f"  ⏭️  Skipping unchanged: {src}")
+                        continue
+                except OSError:
+                    pass
             print(f"  {src} → {dst}")
             subprocess.run(['mpremote', 'connect', port, 'cp', src, dst], 
                           check=True, capture_output=True)
+
+        try:
+            timestamp_file.touch()
+        except OSError as e:
+            print(f"{Fore.YELLOW}⚠️  Warning: Failed to touch deploy timestamp: {e}{Style.RESET_ALL}")
         
         print()
         print(f"{Fore.GREEN}✅ Deployment complete!{Style.RESET_ALL}")
