@@ -1,10 +1,13 @@
 import threading
 import queue
+import sys
+import select
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 from csi_utils import CSIPacket, CSIPacket, CSIPacket, CSIReceiver
+from src.knn_classifier import KNNClassifier
 
 # Create custom colormap: 0=black, 100=yellow
 black_yellow_cmap = LinearSegmentedColormap.from_list(
@@ -25,6 +28,9 @@ class SpectrogramRTPlot:
         self.cmap = black_yellow_cmap if cmap == 'black_yellow' else cmap
         self.update_queue = queue.Queue()  # Thread-safe queue for updates
 
+        self.selected_subcarriers =[11, 12, 13, 17, 44, 45, 46, 48, 49, 50, 51, 52]# [28, 38, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50]
+
+        self.knnClassifier = KNNClassifier(k=3, window_size=100, num_subcarriers=len(self.selected_subcarriers), num_classes=3)
         self.fig, self.ax = plt.subplots(figsize=(6, 4))
         self.im = self.ax.imshow(
             self.buffer,
@@ -114,8 +120,8 @@ class SpectrogramRTPlot:
         self.im.set_data(self.buffer)
         # keep colormap autoscaling stable if desired; otherwise comment out
         # self.im.set_clim(vmin=self.buffer.min(), vmax=self.buffer.max())
-        self.fig.canvas.draw_idle()
-        plt.pause(0.001)
+        self.fig.canvas.flush_events()
+        self.fig.canvas.draw()
 
     def close(self):
         plt.close(self.fig)
@@ -134,6 +140,10 @@ class SpectrogramRTPlot:
     def _process_csi_packet(self, csi_packet:CSIPacket):
         # add to spectrogram
         amplitude = csi_packet.amplitudes
+        selected_amplitudes = amplitude[self.selected_subcarriers]
+        self.knnClassifier.process_amplitudes(selected_amplitudes)
+        # amps_normalized = 50+(amplitude - np.average(selected_amplitudes))#) / (np.max(selected_amplitudes) - np.min(selected_amplitudes) + 1e-6) * 100
+        # self.update_column(amps_normalized)
         self.update_column(amplitude)
 
 if __name__ == "__main__":
@@ -144,10 +154,33 @@ if __name__ == "__main__":
     print("Starting real-time CSI spectrogram plot. \n" \
     "In another terminal, run the CSI streamer to send data to UDP port 5001, for example:\n" \
         "./me stream --ip 100.64.10.237 ")
+    print("Type a label and press Enter to add a KNN training sample from the current buffer.")
+
+    def poll_user_line():
+        if select.select([sys.stdin], [], [], 0)[0]:
+            line = sys.stdin.readline()
+            if line == "":
+                return None
+            return line.rstrip("\n")
+        return None
+
     try:
         while True:
+            user_line = poll_user_line()
+            if user_line is not None and user_line.strip():
+                plot.knnClassifier.add_label(user_line.strip())
+                print(f"Added KNN label: {user_line.strip()}")
             plot._refresh()
-            time.sleep(0.1)
+            metrics=plot.knnClassifier.update_state()
+            print("Predicted Class:", metrics['predicted_class'])
+            print("Class Probabilities:", metrics['class_probabilities'])
+            print("packets Processed:", plot.knnClassifier.packet_count)
+            plot.knnClassifier.packet_count=0
+
+            # if plot.knnClassifier.buffer: 
+            #     print("features:", plot.knnClassifier.calculate_current_features())
+            time.sleep(0.3)
+            
 
         #test data
         for i in range(100):

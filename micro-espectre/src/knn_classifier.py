@@ -89,11 +89,11 @@ class KNNClassifier(IDetector):
         for sc in range(len(self.buffer[0])):#sc=12
             amplitudes=[self.buffer[i][sc] for i in range(len(self.buffer))]        
             avg_amplitude = sum(amplitudes) / len(amplitudes) if amplitudes else 0
-            std_dev= math.sqrt(sum((x - avg_amplitude) ** 2 for x in amplitudes) / len(amplitudes)) if amplitudes else 0
-            features.append(avg_amplitude)
-            features.append(std_dev)
-        if len(features) != self.num_subcarriers * 2:
-            raise ValueError(f"Feature vector must have {self.num_subcarriers * 2} elements")
+            variance= (sum((x - avg_amplitude) ** 2 for x in amplitudes) / len(amplitudes)) if amplitudes else 0
+#            features.append(avg_amplitude)
+            features.append(variance)
+        # if len(features) != self.num_subcarriers * 2:
+        #     raise ValueError(f"Feature vector must have {self.num_subcarriers * 2} elements")
         return features
 
     def load_training_data(self, samples, labels):
