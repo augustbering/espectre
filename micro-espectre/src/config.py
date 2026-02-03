@@ -76,6 +76,12 @@ GUARD_BAND_HIGH = 52           # Last valid subcarrier
 DC_SUBCARRIER = 32             # DC null subcarrier
 BAND_SIZE = 12                 # Selected subcarriers for motion detection
 
+MANUAL_CALIBRATION={"subcarriers":None,"agc_gain":None,"fft_gain":None}  # Optional manual calibration values
+# example calibration:
+# MANUAL_CALIBRATION={"subcarriers":[36, 37, 38, 39, 40, 42, 44, 45, 46, 48, 49, 50],
+#                    "agc_gain":60,"fft_gain":214}  
+# SEG_THRESHOLD = 0.78  # Example: fixed manual threshold (0.1-10.0)
+
 # Optional local overrides (config_local.py is gitignored)
 try:
     import src.config_local as _local

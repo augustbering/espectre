@@ -119,7 +119,7 @@ def connect_wifi():
     wlan.csi_enable(buffer_size=config.CSI_BUFFER_SIZE)
     
     # Connect
-    print(f"Connecting to WiFi...")
+    print(f"Connecting to WiFi SSID: {config.WIFI_SSID} ...")
     wlan.connect(config.WIFI_SSID, config.WIFI_PASSWORD)
     
     # Wait for connection
@@ -295,11 +295,33 @@ def run_band_calibration(wlan, detector, traffic_gen, chip_type=None):
     
     # Phase 1: Gain Lock (~3 seconds)
     # Stabilizes AGC/FFT before calibration to ensure clean data
-    agc, fft, skipped = run_gain_lock(wlan)
+    if config.MANUAL_CALIBRATION["agc_gain"] is not None and config.MANUAL_CALIBRATION["fft_gain"] is not None:
+        print(f"Using manual gain calibration: AGC={config.MANUAL_CALIBRATION['agc_gain']}, FFT={config.MANUAL_CALIBRATION['fft_gain']}")
+        agc = config.MANUAL_CALIBRATION["agc_gain"]
+        fft = config.MANUAL_CALIBRATION["fft_gain"]
+        wlan.csi_force_gain(agc, fft)
+
+        skipped = False
+    else:
+        agc, fft, skipped = run_gain_lock(wlan)
     
     if skipped:
         print("Note: Proceeding with band calibration without gain lock")
     
+
+
+    if config.MANUAL_CALIBRATION["subcarriers"] is not None:
+        selected_band = config.MANUAL_CALIBRATION["subcarriers"]
+        cal_values = None
+        print(f"Using manual subcarrier calibration: {selected_band}")
+        detector.set_threshold(float(SEG_THRESHOLD))
+        threshold_source = "manual"
+        config.SELECTED_SUBCARRIERS = selected_band
+        print(f'Manual threshold: {SEG_THRESHOLD:.2f}')
+        # Resume main loop
+        g_state.calibration_mode = False
+        return True
+
     print('')
     print('-'*60)
     print(f'Band Calibration (~7 seconds) [HT20: {NUM_SUBCARRIERS} SC]')
